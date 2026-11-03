@@ -39,3 +39,16 @@
   scrollbar-width: thin;
   scrollbar-color: rgb(255 255 255 / 0.15) transparent;
 }
+
+/* Print: hide app chrome, keep content */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+  }
+  @page {
+    margin: 12mm;
+  }
+}

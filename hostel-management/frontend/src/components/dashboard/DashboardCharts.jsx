@@ -74,45 +74,56 @@ export function MonthlyFinanceChart({ data }) {
   );
 }
 
-/** Donut: occupied vs available beds with occupancy % in the centre. */
-export function BedsDonutChart({ occupied, available }) {
-  const total = occupied + available;
-  const percent = total ? Math.round((occupied / total) * 100) : 0;
-  const data = [
-    { name: 'Occupied', value: occupied, color: CHART_COLORS.primary },
-    { name: 'Available', value: available, color: CHART_COLORS.muted },
-  ];
+/**
+ * Donut chart with a centre label and legend.
+ * data: [{ name, value, color }], format: value formatter for legend/tooltip
+ */
+export function DonutChart({ data, centerValue, centerLabel, format = formatNumber }) {
+  const total = data.reduce((s, d) => s + (Number(d.value) || 0), 0);
+  const chartData = total ? data : [{ name: 'No data', value: 1, color: '#e2e8f0' }];
   return (
     <div>
       <div className="relative">
         <ResponsiveContainer width="100%" height={200}>
           <PieChart>
-            <Pie data={data} dataKey="value" nameKey="name" innerRadius={62} outerRadius={86} paddingAngle={2} stroke="none">
-              {data.map((entry) => (
+            <Pie data={chartData} dataKey="value" nameKey="name" innerRadius={62} outerRadius={86} paddingAngle={total ? 2 : 0} stroke="none" isAnimationActive={false}>
+              {chartData.map((entry) => (
                 <Cell key={entry.name} fill={entry.color} />
               ))}
             </Pie>
-            <Tooltip contentStyle={tooltipStyle} formatter={(v) => `${formatNumber(v)} beds`} />
+            {total > 0 && <Tooltip contentStyle={tooltipStyle} formatter={(v) => format(v)} />}
           </PieChart>
         </ResponsiveContainer>
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-2xl font-semibold text-slate-900">{percent}%</span>
-          <span className="text-xs text-slate-500">occupied</span>
+          <span className="text-2xl font-semibold text-slate-900">{centerValue}</span>
+          <span className="text-xs text-slate-500">{centerLabel}</span>
         </div>
       </div>
       <ul className="mt-2 space-y-1.5 text-sm">
         {data.map((entry) => (
-          <li key={entry.name} className="flex items-center justify-between">
+          <li key={entry.name} className="flex items-center justify-between gap-2">
             <span className="flex items-center gap-2 text-slate-600">
               <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
               {entry.name}
             </span>
-            <span className="font-medium tabular-nums text-slate-800">{formatNumber(entry.value)}</span>
+            <span className="font-medium tabular-nums text-slate-800">{format(entry.value)}</span>
           </li>
         ))}
       </ul>
     </div>
   );
+}
+
+/** Donut: occupied vs available beds with occupancy % in the centre. */
+export function BedsDonutChart({ occupied, available, maintenance = 0 }) {
+  const total = occupied + available + maintenance;
+  const percent = total ? Math.round((occupied / total) * 100) : 0;
+  const data = [
+    { name: 'Occupied', value: occupied, color: CHART_COLORS.primary },
+    { name: 'Available', value: available, color: CHART_COLORS.muted },
+  ];
+  if (maintenance) data.push({ name: 'Maintenance / Unavailable', value: maintenance, color: CHART_COLORS.expense });
+  return <DonutChart data={data} centerValue={`${percent}%`} centerLabel="occupied" format={(v) => `${formatNumber(v)} beds`} />;
 }
 
 /** Horizontal bars: revenue per hostel. */

@@ -1,35 +1,36 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, LogIn, Hotel } from 'lucide-react';
 import FormField from '../../components/common/FormField';
 import Button from '../../components/common/Button';
 import Alert from '../../components/common/Alert';
 import ApiStatus from '../../components/common/ApiStatus';
 import useDocumentTitle from '../../hooks/useDocumentTitle';
+import { useAuth } from '../../context/AuthContext';
 import { APP_NAME } from '../../utils/constants';
+import { canAccess, firstAllowedPath } from '../../utils/navigation';
 
 function validate({ identifier, password }) {
   const errors = {};
   if (!identifier.trim()) errors.identifier = 'Email or username is required';
-  else if (identifier.includes('@') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier.trim()))
-    errors.identifier = 'Enter a valid email address';
+  else if (identifier.includes('@') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier.trim())) errors.identifier = 'Enter a valid email address';
   if (!password) errors.password = 'Password is required';
-  else if (password.length < 6) errors.password = 'Password must be at least 6 characters';
   return errors;
 }
 
-/**
- * Login page UI.
- * CHUNK 1: form + validation only (opens the dashboard preview).
- * CHUNK 2: will call POST /api/auth/login and store the JWT.
- */
+/** Login page: POST /api/auth/login, stores the JWT and opens the first allowed page. */
 export default function LoginPage() {
   useDocumentTitle('Sign in');
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login, status, user, sessionMessage } = useAuth();
   const [form, setForm] = useState({ identifier: '', password: '', remember: true });
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [serverError, setServerError] = useState('');
+
+  if (status === 'authenticated' && user) return <Navigate to={firstAllowedPath(user)} replace />;
 
   const onChange = (event) => {
     const { name, value, type, checked } = event.target;
@@ -37,15 +38,22 @@ export default function LoginPage() {
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
   };
 
-  const onSubmit = (event) => {
+  const onSubmit = async (event) => {
     event.preventDefault();
     const validationErrors = validate(form);
     setErrors(validationErrors);
+    setServerError('');
     if (Object.keys(validationErrors).length) return;
-
     setSubmitting(true);
-    // Preview only - real authentication arrives in CHUNK 2
-    setTimeout(() => navigate('/dashboard'), 400);
+    try {
+      const loggedIn = await login(form.identifier.trim(), form.password, form.remember);
+      const from = location.state?.from;
+      const target = from && from !== '/login' ? from : firstAllowedPath(loggedIn);
+      navigate(canAccess(loggedIn, {}) ? target : '/profile', { replace: true });
+    } catch (error) {
+      setServerError(error.userMessage);
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -60,9 +68,11 @@ export default function LoginPage() {
       <h1 className="text-2xl font-semibold text-slate-900">Sign in</h1>
       <p className="mt-1 text-sm text-slate-500">Welcome back. Please enter your account details.</p>
 
-      <Alert type="info" className="mt-6">
-        Preview mode: authentication is enabled in CHUNK 2. Any valid-looking credentials open the dashboard preview.
-      </Alert>
+      {(serverError || sessionMessage) && (
+        <Alert type={serverError ? 'error' : 'warning'} className="mt-6">
+          {serverError || sessionMessage}
+        </Alert>
+      )}
 
       <form onSubmit={onSubmit} noValidate className="mt-6 space-y-4">
         <FormField
@@ -89,12 +99,7 @@ export default function LoginPage() {
           error={errors.password}
           required
           rightElement={
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              className="rounded p-1 text-slate-400 hover:text-slate-600"
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
-            >
+            <button type="button" onClick={() => setShowPassword((v) => !v)} className="rounded p-1 text-slate-400 hover:text-slate-600" aria-label={showPassword ? 'Hide password' : 'Show password'}>
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           }
@@ -102,13 +107,7 @@ export default function LoginPage() {
 
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm">
           <label className="flex items-center gap-2 whitespace-nowrap text-slate-600">
-            <input
-              type="checkbox"
-              name="remember"
-              checked={form.remember}
-              onChange={onChange}
-              className="h-4 w-4 rounded border-slate-300 accent-brand-700"
-            />
+            <input type="checkbox" name="remember" checked={form.remember} onChange={onChange} className="h-4 w-4 rounded border-slate-300 accent-brand-700" />
             Keep me signed in
           </label>
           <span className="text-xs text-slate-500">Forgot password? Contact your Super Admin.</span>

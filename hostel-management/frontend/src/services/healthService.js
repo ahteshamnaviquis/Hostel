@@ -6,7 +6,7 @@ export async function getApiHealth() {
     const { data } = await api.get('/health');
     return data.data;
   } catch (error) {
-    if (error.response?.data?.data) return error.response.data.data; // 503 still carries a report
+    if (error.response?.data?.data) return error.response.data.data;
     throw error;
   }
 }

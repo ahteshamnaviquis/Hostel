@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom';
 import { Hotel, X } from 'lucide-react';
 import { getNavigationForUser } from '../../utils/navigation';
 import { APP_SHORT_NAME } from '../../utils/constants';
+import { useHostel } from '../../context/HostelContext';
 
 /**
  * Left navigation. Fixed on desktop (lg+), off-canvas drawer on mobile/tablet.
@@ -9,6 +10,7 @@ import { APP_SHORT_NAME } from '../../utils/constants';
  */
 export default function Sidebar({ user, open, onClose }) {
   const sections = getNavigationForUser(user);
+  const { hostels, hostelId, setHostelId } = useHostel();
 
   return (
     <>
@@ -20,7 +22,7 @@ export default function Sidebar({ user, open, onClose }) {
       />
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-slate-900 text-slate-300 transition-transform duration-200
+        className={`no-print fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-slate-900 text-slate-300 transition-transform duration-200
           lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}
         aria-label="Main navigation"
       >
@@ -35,6 +37,27 @@ export default function Sidebar({ user, open, onClose }) {
             <X className="h-5 w-5" />
           </button>
         </div>
+
+        {hostels.length > 1 && (
+          <div className="border-b border-white/10 px-4 py-3 md:hidden">
+            <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-500" htmlFor="sidebar-hostel">
+              Hostel
+            </label>
+            <select
+              id="sidebar-hostel"
+              value={hostelId}
+              onChange={(e) => setHostelId(e.target.value)}
+              className="h-9 w-full rounded-lg border border-white/10 bg-slate-800 px-2 text-sm text-slate-100"
+            >
+              <option value="">All hostels</option>
+              {hostels.map((h) => (
+                <option key={h.id} value={h.id}>
+                  {h.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <nav className="scrollbar-thin flex-1 overflow-y-auto px-3 py-4">
           {sections.map((section) => (
@@ -62,7 +85,7 @@ export default function Sidebar({ user, open, onClose }) {
           ))}
         </nav>
 
-        <div className="border-t border-white/10 px-5 py-3 text-[11px] text-slate-500">v0.1.0 · Made for Pakistan</div>
+        <div className="border-t border-white/10 px-5 py-3 text-[11px] text-slate-500">v1.0.0 · Made for Pakistan</div>
       </aside>
     </>
   );

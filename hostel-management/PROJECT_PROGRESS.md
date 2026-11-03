@@ -7,83 +7,171 @@ _Last updated: 2026-11-03_
 | # | Chunk | Status |
 |---|-------|--------|
 | 1 | Project Setup and Foundation | ✅ Completed |
-| 2 | Authentication and User Roles | ⏳ Pending (awaiting approval) |
-| 3 | Super Admin Dashboard and Hostel Management | ⏳ Pending |
-| 4 | Building, Floor and Room Management | ⏳ Pending |
-| 5 | Resident Management | ⏳ Pending |
-| 6 | Admissions and Room Allocation | ⏳ Pending |
-| 7 | Fees and Payments | ⏳ Pending |
-| 8 | Expenses and Financial Dashboard | ⏳ Pending |
-| 9 | Check-in and Check-out | ⏳ Pending |
-| 10 | Attendance Management | ⏳ Pending |
-| 11 | Visitor Management | ⏳ Pending |
-| 12 | Complaints and Maintenance | ⏳ Pending |
-| 13 | Notifications | ⏳ Pending |
-| 14 | Reports and Exports | ⏳ Pending |
-| 15 | Audit Logs and Final Settings | ⏳ Pending |
+| 2 | Authentication and User Roles | ✅ Completed |
+| 3 | Super Admin Dashboard and Hostel Management | ✅ Completed |
+| 4 | Building, Floor and Room Management | ✅ Completed |
+| 5 | Resident Management | ✅ Completed |
+| 6 | Admissions and Room Allocation | ✅ Completed |
+| 7 | Fees and Payments | ✅ Completed |
+| 8 | Expenses and Financial Dashboard | ✅ Completed |
+| 9 | Check-in and Check-out | ✅ Completed |
+| 10 | Attendance Management | ✅ Completed |
+| 11 | Visitor Management | ✅ Completed |
+| 12 | Complaints and Maintenance | ✅ Completed |
+| 13 | Notifications | ✅ Completed |
+| 14 | Reports and Exports | ✅ Completed |
+| 15 | Audit Logs and Final Settings | ✅ Completed |
+
+CHUNKS 2–15 were built together at the owner's request ("continue with all chunks at once").
 
 ---
 
-## CHUNK 1 – Project Setup and Foundation ✅
+## How to run
 
-### Delivered
-- **Backend** (Node.js + Express): env config, MySQL pool (`mysql2/promise`, parameterised queries, `withTransaction()` helper), helmet, CORS allow-list, JSON body limits, request logging (dev), consistent JSON error responses, 404 handler, graceful shutdown.
-- **API health check**: `GET /api/health` reports API + MySQL status (200 when healthy, 503 when the DB is unreachable — the API itself keeps running).
-- **Database initialisation**: `npm run db:init` creates the database, applies versioned migrations (tracked in `schema_migrations`) and runs idempotent seeds.
-- **Full database schema** (migration `001_initial_schema.sql`) – 31 tables + `schema_migrations`.
-- **Frontend** (React 18 + Vite + Tailwind CSS v4 + React Router + Axios + Recharts + lucide icons): responsive sidebar (off-canvas on mobile) and top bar (page title, notifications dropdown, user menu, logout confirmation), login page UI with validation, Super Admin dashboard layout with **sample data** (clearly labelled), placeholder pages for every module that name the chunk that will deliver it, 404 page, live API/DB status indicator on the login page.
-- **Reusable components**: Button, FormField, Card, StatCard, PageHeader (breadcrumbs), Badge, Alert, Spinner/PageLoader, EmptyState, DataTable, Modal, ConfirmDialog, ApiStatus, dashboard charts.
+```bash
+# Backend
+cd hostel-management/backend
+npm install
+cp .env.example .env          # set DB_USER / DB_PASSWORD / JWT_SECRET
+npm run db:init               # database, tables, seed data, Super Admin
+npm run dev                   # http://localhost:5000
 
-### API endpoints
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/` | API info |
-| GET | `/api/health` | API + database health report |
+# Frontend (second terminal)
+cd hostel-management/frontend
+npm install
+npm run dev                   # http://localhost:5173
+```
 
-### Database (migration 001)
-Access control: `roles`, `permissions`, `role_permissions`, `users`, `user_permissions`, `user_hostels`
-Property: `hostels`, `buildings`, `floors`, `rooms`, `room_beds`
-Residents: `residents`, `resident_documents`
-Stay: `admissions`, `room_allocations`, `room_transfers`
-Finance: `fee_types`, `resident_fee_structures`, `invoices`, `invoice_items`, `payments`, `payment_allocations`, `refunds`, `expense_categories`, `expenses`
-Operations: `attendance`, `visitors`, `complaints`
-System: `notifications`, `audit_logs`, `system_settings`
+Default Super Admin (created by `db:init` from `.env`): **superadmin@hostel.pk / Admin@12345** – change it after first login.
 
-Seed data: 2 roles, 11 permissions, default Hostel Admin permissions, 11 fee types, 11 expense categories, 16 global settings (PKR, DD/MM/YYYY, Asia/Karachi, receipt/invoice prefixes, fee due day, notification toggles).
-
-### Tested
-- `db:init` on MariaDB 10.11 (MySQL-compatible): fresh run and re-run (idempotent).
-- DB-level business rules verified with real inserts (rolled back): double bed allocation rejected, one active bed per resident, one open admission per resident, duplicate attendance (resident + date) rejected, duplicate monthly invoice rejected (allowed again after cancellation), overpaid invoice rejected, zero-bed room rejected.
-- API: health 200 (DB up) / 503 (wrong DB password), 404 route, malformed JSON → 400, CORS header for the frontend origin.
-- Frontend: production build passes; browser test of login validation, login → dashboard, sidebar navigation, placeholder pages, 404, logout confirmation, mobile layout (no horizontal overflow) and mobile menu; no console errors or warnings.
+Optional:
+- `npm run db:seed-demo` (backend, server running) – demo hostels, rooms, residents, payments, expenses, attendance, visitors, complaints. Demo admins: `admin@demo.pk`, `rabia@demo.pk` (password `Admin@12345`). **Never run on production.**
+- `npm run test:api` (backend, server running) – 121 end-to-end checks of business rules, isolation and security.
 
 ---
 
-## Important development decisions
+## What each chunk delivers
 
-1. **Vite instead of Create React App** – CRA is deprecated; Vite is the current standard React toolchain. `src/App.jsx` structure is unchanged.
-2. **Tailwind CSS v4** chosen over Bootstrap for a cleaner custom SaaS look. Brand colour (deep teal) is defined as tokens in `src/index.css`.
-3. **Dev proxy**: the frontend calls `/api`; Vite proxies to `http://localhost:5000`. In production set `VITE_API_BASE_URL`.
-4. **`.env` is not committed** – `backend/.env.example` is the template (`cp .env.example .env`). Credentials stay in the backend only.
-5. **Business rules enforced in the database as well as in code**, using STORED generated columns + UNIQUE indexes:
-   - `room_allocations.active_bed_id` → a bed cannot have two active residents.
-   - `room_allocations.active_resident_id` → a resident cannot hold two active beds.
-   - `admissions.open_resident_id` → one pending/active admission per resident.
-   - `invoices.monthly_admission_id + billing_month` → no duplicate monthly invoice.
-   - `attendance (resident_id, attendance_date)` unique → no duplicate attendance.
-   - CHECK constraints: room beds > 0, non-negative money, `paid_amount <= total_amount`.
-6. **Occupied/available beds are derived from `room_beds`**, not stored twice on `rooms`, so counts can never drift.
-7. **Financial records are never deleted** – invoices are `cancelled`, payments/refunds `reversed`, expenses `void` (with who/when/why). Master records use `deleted_at` soft deletes.
-8. **Check-in/check-out stored on `admissions`** (one admission = one stay) rather than a separate table – keeps the model simple and history-preserving.
-9. **`user_permissions`** table added (not in the original list) so the Super Admin can configure permissions per administrator; `role_permissions` holds role defaults.
-10. **Room types** are an ENUM (`single`, `double`, `triple`, `four_seater`, `dormitory`, `custom`) with capacity set per room – no extra table needed.
-11. **`hostel_id` on every operational table** to make hostel-level data isolation simple and fast to enforce in queries.
-12. **Money** is `DECIMAL(12,2)` in PKR; MySQL session timezone `+05:00` (PKT); dates returned as strings to avoid timezone shifts.
-13. **Province** stored as text and validated against Pakistan's provinces/territories in the API (list in `frontend/src/utils/constants.js`).
+### CHUNK 1 – Foundation
+Express API skeleton, MySQL pool, env config, health check, `db:init` migration runner, full schema, React/Vite/Tailwind shell, reusable UI components.
 
-## Known limitations after CHUNK 1
-- No authentication yet – the login form only validates input and opens the dashboard preview (CHUNK 2).
-- Dashboard numbers are **sample data** (`frontend/src/utils/sampleData.js`) – replaced with live data in CHUNK 3.
-- No Super Admin account is seeded yet (needs bcrypt, CHUNK 2).
-- Module pages other than Dashboard are placeholders.
-- MySQL DDL auto-commits, so a migration that fails partway may need manual cleanup before re-running.
+### CHUNK 2 – Authentication & roles
+- JWT login (email or username), bcrypt (12 rounds), login rate limit (10 failed / 15 min / IP).
+- Every request re-loads the user: deactivation, permission and hostel changes take effect immediately.
+- Tokens issued before a password change / reset are rejected.
+- Super Admin creates administrators, assigns hostels, configures per-admin permissions, resets passwords, activates/deactivates.
+- Frontend: AuthContext, protected routes, permission-aware sidebar, 401 → automatic sign-out, profile + change password.
+
+### CHUNK 3 – Dashboards & hostels
+- Live dashboards from the database (no sample data): hostels, admins, buildings, rooms, capacity, occupied/available beds, occupancy %, residents, new admissions, leaving soon, fees collected, pending fees, expenses, revenue, open complaints.
+- Charts: hostel-wise occupancy, monthly collection vs expenses, occupied vs available, hostel-wise revenue (Super Admin) / room status and paid vs pending (Hostel Admin).
+- Recent admissions, payments, transfers, complaints, check-ins/outs, activities, quick actions.
+- Hostel CRUD, details page with statistics, activate/deactivate, assign administrators.
+- Top-bar hostel switcher filters every page.
+
+### CHUNK 4 – Buildings, floors, rooms, beds
+- Hierarchy Hostel → Building → Floor → Room → Beds. Beds (B1, B2 …) are created automatically from "total beds".
+- Capacity can never be reduced below occupied beds; occupied rooms cannot be deactivated or deleted.
+- Room status (available / partially / fully occupied) is recalculated automatically; maintenance & inactive are manual. Individual beds can be put under maintenance.
+- Room types: single, double, triple, four-seater, dormitory, custom. Rent and deposit per room.
+
+### CHUNK 5 – Residents
+- Full registration form (personal, education/employment, guardian), CNIC auto-format & validation, gender checked against hostel type (boys/girls/mixed).
+- Search (name, CNIC, mobile, reg. no, student ID), filters, pagination, profile with tabs, edit, suspend / re-activate / cancel.
+- Private documents (CNIC/B-Form, student card, photo, other) and profile picture – stored outside the web root, downloaded only through authenticated, hostel-checked endpoints.
+
+### CHUNK 6 – Admissions & allocation
+- New admission: choose resident → visual picker of free beds → rent/deposit/admission fee/discount/extra monthly charges.
+- One transaction: admission, allocation, bed + room status, fee structure, initial invoices, audit log, notification.
+- Transfers keep the old allocation (status `transferred`), release the old bed, record date + reason, optionally change rent.
+- Cancel an admission made by mistake (only before any payment).
+
+### CHUNK 7 – Fees & payments
+- Fee types (rent, deposit, admission, mess, electricity, gas, laundry, internet, other, late fine, discount).
+- Per-admission fee structure with effective dates; monthly generation (never duplicates); manual invoices; late fines.
+- Payments: partial payments, FIFO allocation to oldest dues (or chosen invoices), surplus kept as advance credit and applied automatically to new invoices.
+- Printable receipts (hostel, receipt no, resident, room, date, fee details, amount, remaining balance, method, received by).
+- Payment reversal (kept for audit), invoice cancellation (only unpaid), refunds (advance / deposit / other) with limits.
+
+### CHUNK 8 – Expenses & finance
+- Expenses with categories, receipt attachment, edit, void with reason (never deleted). Filters and category totals.
+- Financial summary: billed, collected, expenses, refunds, net income, outstanding; 12-month trend; by category, by payment method, by hostel.
+
+### CHUNK 9 – Check-in / check-out
+- Pending admissions (bed reserved) → check-in. Leaving-soon list, current residents, check-out history.
+- Checkout preview → confirm: deposit adjusted against dues (recorded as a non-cash `deposit_adjustment` payment), refunds recorded, bed released only on confirmation, fee lines stopped, resident marked checked out. A resident cannot be checked out twice. Dues remaining after checkout can still be collected.
+
+### CHUNK 10 – Attendance
+- Daily sheet of residents staying on that date; P / A / Leave / Late (+ entry time), remarks, "mark all present". Re-saving updates (unique resident + date).
+- Monthly report with attendance %, history with filters.
+
+### CHUNK 11 – Visitors
+- Entry (resident, visitor, CNIC, contact, relationship, date, time, purpose), exit, edit, "currently inside", search and date filters.
+
+### CHUNK 12 – Complaints
+- Register (auto room from resident), categories, priority, assignment, status workflow open → in progress → resolved / rejected (resolution remarks required), complete history timeline.
+
+### CHUNK 13 – Notifications
+- In-app notifications to Super Admins + the hostel's admins: new admission, new complaint, fees due in 3 days, overdue payments, upcoming checkouts, complaints open > 2 days, maintenance reminders, monthly fees not generated.
+- Reminder job runs hourly (`REMINDER_INTERVAL_MINUTES`) and on demand; de-duplicated per period; toggles in Settings. Bell with unread count (polls every minute) and notifications page.
+
+### CHUNK 14 – Reports
+- 16 reports: resident list, room occupancy, available beds, admissions, checkouts, fee collection, outstanding fees, expenses, attendance, visitors, complaints, monthly financial summary; Super Admin: hostel-wise occupancy, hostel-wise revenue & expenses, hostel-wise expenses by category, administrator activity.
+- Date range, hostel, status, category and payment-method filters; on-screen preview, print, **PDF** (pdfkit) and **Excel** (exceljs) export.
+
+### CHUNK 15 – Audit logs, settings, security review
+- Audit log of logins (incl. failed), admissions, allocations, transfers, payments, reversals, refunds, expenses, checkouts, settings and other changes – with user, hostel, IP, before/after values. Filterable viewer.
+- Settings: app name, currency, date format, receipt/invoice prefixes, receipt footer, fee due day, generation day, late fine, notification toggles (validated).
+
+---
+
+## API endpoints (all under `/api`, JSON, Bearer token except login/health)
+
+| Area | Endpoints |
+|------|-----------|
+| Health | `GET /health` |
+| Auth | `POST /auth/login`, `GET /auth/me`, `POST /auth/logout`, `PUT /auth/profile`, `PUT /auth/change-password` |
+| Users (SA) | `GET/POST /users`, `GET/PUT /users/:id`, `PATCH /users/:id/status`, `PUT /users/:id/hostels`, `PUT /users/:id/permissions`, `POST /users/:id/reset-password`, `GET /permissions` |
+| Dashboard | `GET /dashboard?hostel_id=` |
+| Hostels | `GET /hostels`, `GET /hostels/options`, `GET /hostels/:id`; SA: `POST /hostels`, `PUT /hostels/:id`, `PATCH /hostels/:id/status`, `PUT /hostels/:id/admins` |
+| Property | `GET/POST /buildings`, `PUT/DELETE /buildings/:id`; `GET/POST /floors`, `PUT/DELETE /floors/:id`; `GET/POST /rooms`, `GET /rooms/available`, `GET/PUT/DELETE /rooms/:id`, `PATCH /rooms/:id/status`, `PATCH /rooms/:id/beds/:bedId` |
+| Residents | `GET/POST /residents`, `GET/PUT /residents/:id`, `PATCH /residents/:id/status`, `GET/POST /residents/:id/photo`, `POST /residents/:id/documents`, `GET /residents/:id/documents/:docId/download`, `DELETE /residents/:id/documents/:docId` |
+| Admissions | `GET/POST /admissions`, `GET /admissions/:id`, `POST /admissions/:id/check-in`, `POST /admissions/:id/transfer`, `POST /admissions/:id/cancel`, `GET /admissions/:id/checkout-preview`, `POST /admissions/:id/checkout`, `POST/DELETE /admissions/:id/fee-structures[/:structureId]`, `GET /allocations`, `GET /transfers` |
+| Fees | `GET /fee-types`, `GET /fees/accounts`, `GET/POST /invoices`, `GET /invoices/:id`, `POST /invoices/:id/cancel`, `POST /invoices/generate-monthly`, `POST /invoices/apply-late-fines`, `GET/POST /payments`, `GET /payments/:id/receipt`, `POST /payments/:id/reverse`, `GET/POST /refunds` |
+| Expenses | `GET /expense-categories`, `GET/POST /expenses`, `PUT /expenses/:id`, `POST /expenses/:id/void`, `GET /expenses/:id/receipt`, `GET /finance/summary` |
+| Attendance | `GET /attendance/sheet`, `POST /attendance`, `GET /attendance/history`, `GET /attendance/monthly` |
+| Visitors | `GET/POST /visitors`, `PUT /visitors/:id`, `POST /visitors/:id/exit` |
+| Complaints | `GET/POST /complaints`, `GET/PUT /complaints/:id` |
+| Notifications | `GET /notifications`, `PATCH /notifications/:id/read`, `PATCH /notifications/read-all`, `POST /notifications/run-reminders` (SA) |
+| Reports | `GET /reports`, `GET /reports/:key?format=json|pdf|xlsx&hostel_id=&from=&to=&status=&category_id=&payment_method=` |
+| System (SA) | `GET/PUT /settings`, `GET /audit-logs` |
+
+## Database changes
+
+- **001_initial_schema** – 31 tables (see CHUNK 1).
+- **002_complaint_updates_and_adjustments** – `complaint_updates` (status history) and `deposit_adjustment` payment method.
+- `db:init` also creates the first Super Admin if none exists.
+
+## Testing performed
+- `npm run test:api`: **121/121 passed** – auth, isolation (admin cannot read/write other hostels), permissions revoked live, double bed allocation, capacity, duplicate monthly invoices, partial/advance payments, reversals, transfers with history, checkout twice, deposit settlement, attendance duplicates, visitor exit rules, complaint workflow, notifications, every report + PDF/Excel export, audit trail, settings validation, file-upload restrictions, SQL-injection attempt. No 5xx errors in server log.
+- Browser (Playwright): every page as Super Admin and Hostel Admin – no console errors, page errors or failed API calls; access-denied pages for unauthorised routes; mobile layout without horizontal scroll; interactive flows (new admission with bed picker, collect payment → receipt, attendance save, checkout settlement, Excel download, logout).
+
+## Important development decisions (in addition to CHUNK 1 decisions)
+1. **Business rules enforced in the database** (unique indexes on generated columns, CHECK constraints) *and* in services with row locks (`SELECT … FOR UPDATE`) inside transactions; beds are locked in id order to avoid deadlocks.
+2. **Hostel isolation**: `hostelScope()` / `findScoped()` helpers are used for every query on hostel data; Super Admin = global.
+3. **Per-admin permissions** are copied from the role defaults when an admin is created and then edited individually (`user_permissions`).
+4. **Payment allocation** is FIFO by due date; surplus becomes advance credit (`payments.unallocated_amount`) which is automatically applied to future invoices. Invoice `paid_amount` is maintained from allocations.
+5. **Security deposit** is tracked as an invoice item; "held" = collected − refunded − adjusted. Adjustment at checkout is a non-cash payment (`deposit_adjustment`, receipt prefix `ADJ`) excluded from revenue figures.
+6. **Revenue** = posted cash/bank/wallet payments (excluding deposit adjustments); net income = revenue − refunds − expenses.
+7. **Uploads** are not served statically; only JPG/PNG/WEBP/PDF (extension + MIME), random names, size limit.
+8. **Reports** are defined once on the backend and rendered to JSON, PDF and Excel – exports always match the on-screen data and permissions.
+9. **Notifications** use a dedupe key so automatic reminders are not repeated; email/SMS/WhatsApp can be added later as additional channels.
+10. **Validation**: a small schema validator whitelists fields (no mass assignment), converts types and returns field-level errors shown under form inputs.
+
+## Known limitations / possible next steps
+- No email/SMS/WhatsApp delivery yet (in-app only, as required for the initial version).
+- Monthly rent is not prorated for mid-month admissions/transfers (full month charged; adjust via discount or manual invoice).
+- Settings are global; per-hostel overrides are supported by the schema (`system_settings.hostel_id`) but not exposed in the UI.
+- Fee type list is fixed (seeded); custom fee types would need a small admin screen.
+- JWT is stored in browser storage; for higher security deploy behind HTTPS and consider httpOnly cookies.
+- Set `TRUST_PROXY=1` when running behind nginx so rate limiting and audit IPs see real client IPs.

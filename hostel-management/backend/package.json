@@ -8,7 +8,8 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "db:init": "node scripts/dbInit.js",
-    "test:api": "node tests/api.test.js"
+    "test:api": "node tests/api.test.js",
+    "db:seed-demo": "node scripts/seedDemo.js"
   },
   "engines": {
     "node": ">=18"
