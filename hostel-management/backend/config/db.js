@@ -22,10 +22,25 @@ const pool = mysql.createPool({
   charset: 'utf8mb4',
 });
 
-/** Run a parameterised query and return the rows. */
+// Run every session in Pakistan time so NOW(), CURDATE() and TIMESTAMP columns are PKT.
+pool.pool.on('connection', (connection) => {
+  connection.query('SET time_zone = ?', [env.db.timezone]);
+});
+
+/**
+ * Run a parameterised query and return the rows.
+ * Uses client-side escaping (pool.query) so arrays work with IN (?) and LIMIT ? accepts numbers.
+ * Never concatenate user input into SQL - always pass it through params.
+ */
 async function query(sql, params = []) {
-  const [rows] = await pool.execute(sql, params);
+  const [rows] = await pool.query(sql, params);
   return rows;
+}
+
+/** Returns the first row or null. */
+async function queryOne(sql, params = []) {
+  const rows = await query(sql, params);
+  return rows[0] || null;
 }
 
 /**
@@ -58,4 +73,4 @@ async function ping() {
   }
 }
 
-module.exports = { pool, query, withTransaction, ping };
+module.exports = { pool, query, queryOne, withTransaction, ping };

@@ -11,6 +11,7 @@
 const fs = require('fs');
 const path = require('path');
 const mysql = require('mysql2/promise');
+const bcrypt = require('bcrypt');
 const env = require('../config/env');
 
 const MIGRATIONS_DIR = path.join(__dirname, '..', 'database', 'migrations');
@@ -75,6 +76,21 @@ async function main() {
     for (const file of listSqlFiles(SEEDS_DIR)) {
       console.log(`[db:init] Running seed ${file} ...`);
       await connection.query(fs.readFileSync(path.join(SEEDS_DIR, file), 'utf8'));
+    }
+
+    // Initial Super Admin (only if none exists)
+    const [[{ superAdmins }]] = await connection.query(
+      `SELECT COUNT(*) AS superAdmins FROM users u JOIN roles r ON r.id = u.role_id WHERE r.name = 'super_admin' AND u.deleted_at IS NULL`
+    );
+    if (!superAdmins) {
+      const { name, email, password } = env.superAdmin;
+      const hash = await bcrypt.hash(password, 12);
+      await connection.query(
+        `INSERT INTO users (role_id, full_name, email, username, password_hash, status)
+         SELECT id, ?, ?, 'superadmin', ?, 'active' FROM roles WHERE name = 'super_admin'`,
+        [name, email.toLowerCase(), hash]
+      );
+      console.log(`[db:init] Super Admin created: ${email} (change the password after first login!)`);
     }
 
     const [[{ tableCount }]] = await connection.query(

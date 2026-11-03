@@ -36,10 +36,28 @@ const env = {
     expiresIn: process.env.JWT_EXPIRES_IN || '8h',
   },
 
+  superAdmin: {
+    name: process.env.SUPER_ADMIN_NAME || 'Super Admin',
+    email: process.env.SUPER_ADMIN_EMAIL || 'superadmin@hostel.pk',
+    password: process.env.SUPER_ADMIN_PASSWORD || 'Admin@12345',
+  },
+
+  reminderIntervalMinutes: toInt(process.env.REMINDER_INTERVAL_MINUTES, 60),
+
   uploads: {
     dir: path.join(__dirname, '..', process.env.UPLOAD_DIR || 'uploads'),
     maxSizeMb: toInt(process.env.MAX_UPLOAD_SIZE_MB, 5),
   },
 };
+
+const WEAK_SECRETS = ['', 'change_this_to_a_long_random_secret'];
+if (WEAK_SECRETS.includes(env.jwt.secret) || env.jwt.secret.length < 32) {
+  if (env.isProduction) {
+    throw new Error('JWT_SECRET must be set to a long random value (32+ characters) in production');
+  }
+  // eslint-disable-next-line no-console
+  console.warn('[config] WARNING: JWT_SECRET is weak or missing - set a long random value in .env');
+  if (!env.jwt.secret) env.jwt.secret = 'dev-only-insecure-secret-change-me-please-0000';
+}
 
 module.exports = env;
