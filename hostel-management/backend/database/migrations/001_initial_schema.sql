@@ -743,6 +743,7 @@ CREATE TABLE system_settings (
   scope_hostel_id INT UNSIGNED GENERATED ALWAYS AS (IFNULL(hostel_id, 0)) STORED,
   PRIMARY KEY (id),
   UNIQUE KEY uq_settings_scope_key (scope_hostel_id, setting_key),
-  CONSTRAINT fk_settings_hostel     FOREIGN KEY (hostel_id)  REFERENCES hostels (id) ON DELETE CASCADE,
+  -- No ON DELETE action: MySQL forbids CASCADE/SET NULL on the base column of a generated column (hostels are soft-deleted anyway)
+  CONSTRAINT fk_settings_hostel     FOREIGN KEY (hostel_id)  REFERENCES hostels (id),
   CONSTRAINT fk_settings_updated_by FOREIGN KEY (updated_by) REFERENCES users (id)   ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

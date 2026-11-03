@@ -153,6 +153,7 @@ Express API skeleton, MySQL pool, env config, health check, `db:init` migration 
 - `db:init` also creates the first Super Admin if none exists.
 
 ## Testing performed
+- Database: tested on **MySQL 8.0.46** and **MariaDB 10.11** (fresh `db:init`, re-run, full API test and demo seed on both).
 - `npm run test:api`: **121/121 passed** – auth, isolation (admin cannot read/write other hostels), permissions revoked live, double bed allocation, capacity, duplicate monthly invoices, partial/advance payments, reversals, transfers with history, checkout twice, deposit settlement, attendance duplicates, visitor exit rules, complaint workflow, notifications, every report + PDF/Excel export, audit trail, settings validation, file-upload restrictions, SQL-injection attempt. No 5xx errors in server log.
 - Browser (Playwright): every page as Super Admin and Hostel Admin – no console errors, page errors or failed API calls; access-denied pages for unauthorised routes; mobile layout without horizontal scroll; interactive flows (new admission with bed picker, collect payment → receipt, attendance save, checkout settlement, Excel download, logout).
 

@@ -62,7 +62,15 @@ async function main() {
       console.log(`[db:init] Applying migration ${file} ...`);
       const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, file), 'utf8');
       // Note: MySQL DDL statements auto-commit, so a failed migration may be partially applied.
-      await connection.query(sql);
+      try {
+        await connection.query(sql);
+      } catch (error) {
+        throw new Error(
+          `Migration ${file} failed: ${error.message}\n` +
+            'MySQL cannot roll back table creation, so the database is now partly created. ' +
+            `Drop it (DROP DATABASE ${database};) and run "npm run db:init" again after fixing the problem.`
+        );
+      }
       await connection.query('INSERT INTO schema_migrations (name) VALUES (?)', [file]);
       appliedCount += 1;
     }
