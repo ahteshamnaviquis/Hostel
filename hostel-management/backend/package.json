@@ -9,7 +9,8 @@
     "dev": "nodemon server.js",
     "db:init": "node scripts/dbInit.js",
     "test:api": "node tests/api.test.js",
-    "db:seed-demo": "node scripts/seedDemo.js"
+    "db:seed-demo": "node scripts/seedDemo.js",
+    "admin:reset": "node scripts/resetSuperAdmin.js"
   },
   "engines": {
     "node": ">=18"
