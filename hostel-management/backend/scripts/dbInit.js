@@ -68,7 +68,7 @@ async function main() {
         throw new Error(
           `Migration ${file} failed: ${error.message}\n` +
             'MySQL cannot roll back table creation, so the database is now partly created. ' +
-            `Drop it (DROP DATABASE ${database};) and run "npm run db:init" again after fixing the problem.`
+            'Run "npm run db:reset" to delete it and create it again (development only - this erases all data).'
         );
       }
       await connection.query('INSERT INTO schema_migrations (name) VALUES (?)', [file]);

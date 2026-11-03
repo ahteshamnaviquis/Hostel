@@ -27,6 +27,8 @@ Check: http://localhost:5000/api/health → `"database": { "status": "connected"
 
 First login: **superadmin@hostel.pk / Admin@12345** (from `.env`) – change the password from *My Profile*.
 
+If `db:init` fails half-way (e.g. "Table 'roles' already exists"), run `npm run db:reset` in `backend` – it deletes the database and creates it again (**development only, erases all data**).
+
 Cannot log in as Super Admin ("Invalid email/username or password")? Run `npm run admin:reset` in `backend` – it creates the Super Admin, or resets its password, from `SUPER_ADMIN_EMAIL` / `SUPER_ADMIN_PASSWORD` in `.env`.
 
 Optional (with the server running):
